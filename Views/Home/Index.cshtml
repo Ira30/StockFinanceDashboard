@@ -1,0 +1,129 @@
+﻿
+ @using System.Text.Json
+@model DashboardViewModel
+
+<h1>📊 Stock Dashboard</h1>
+
+<form method="get">
+    <label>Filter by Industry:</label>
+    <select name="industry" onchange="this.form.submit()">
+        <option value="">-- All --</option>
+        @foreach (var industry in Model.Industries)
+        {
+            <option value="@industry" selected="@(industry == Model.SelectedIndustry ? "selected" : null)">
+                @industry
+            </option>
+        }
+    </select>
+</form>
+
+<canvas id="stockChart" width="400" height="200"></canvas>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Last</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Chg</th>
+            <th>Chg %</th>
+            <th>Volume</th>
+            <th>Time</th>
+            <th>Industry</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var stock in Model.Stocks)
+        {
+            <tr>
+                <td>@stock.Name</td>
+                <td>@stock.Last</td>
+                <td>@stock.High</td>
+                <td>@stock.Low</td>
+                <td>@stock.Chg</td>
+                <td>@stock.ChgPercentage</td>
+                <td>@stock.Volume</td>
+                <td>@stock.Time</td>
+                <td>@stock.Industry</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('stockChart').getContext('2d');
+
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(JsonSerializer.Serialize(Model.Stocks.Select(s => s.Name))),
+                datasets: [{
+                    label: 'Stock Prices',
+                    data: @Html.Raw(JsonSerializer.Serialize(Model.Stocks.Select(s => s.Last))),
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    </script>
+} 
+
+
+@* @model DashboardViewModel
+
+<h1>📊 Stock Dashboard</h1>
+
+<form method="get">
+    <label>Filter by Industry:</label>
+    <select name="industry" onchange="this.form.submit()">
+        <option value="">-- All --</option>
+        @foreach (var industry in Model.Industries)
+        {
+            <option value="@industry" selected="@(industry == Model.SelectedIndustry ? "selected" : null)">
+                @industry
+            </option>
+        }
+    </select>
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Last</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Chg</th>
+            <th>Chg %</th>
+            <th>Volume</th>
+            <th>Time</th>
+            <th>Industry</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var stock in Model.Stocks)
+        {
+            <tr>
+                <td>@stock.Name</td>
+                <td>@stock.Last</td>
+                <td>@stock.High</td>
+                <td>@stock.Low</td>
+                <td>@stock.Chg</td>
+                <td>@stock.ChgPercentage</td>
+                <td>@stock.Volume</td>
+                <td>@stock.Time</td>
+                <td>@stock.Industry</td>
+            </tr>
+        }
+    </tbody>
+</table> *@

@@ -1,0 +1,44 @@
+# Ignore build output
+/bin/
+/obj/
+
+# User-specific files
+.vs/
+.vscode/
+.idea/
+
+# User-specific configuration files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Ignore package files and directories
+packages/
+.nuget/
+
+# Ignore Visual Studio for Mac files
+.vscode/
+
+# Ignore npm and other dependency manager folders (for front-end projects)
+node_modules/
+
+# Ignore Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Ignore ASP.NET temporary files
+# (If you're working on ASP.NET Core or Web API projects)
+wwwroot/
+
+# Ignore local settings
+appsettings.Development.json
+appsettings.Test.json
+
+# Ignore log files
+*.log
+
+# Ignore backup files
+*~

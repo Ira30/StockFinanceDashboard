@@ -1,0 +1,25 @@
+@model List<StockData>
+
+<h1>Stock Dashboard</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Last Price</th>
+            <th>Industry</th>
+            <th>Change (%)</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var stock in Model)
+        {
+            <tr>
+                <td>@stock.Name</td>
+                <td>@stock.Last</td>
+                <td>@stock.Industry</td>
+                <td>@stock.ChgPercentage</td>
+            </tr>
+        }
+    </tbody>
+</table>
