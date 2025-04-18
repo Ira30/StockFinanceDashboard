@@ -1,24 +1,41 @@
-﻿
- @using System.Text.Json
+﻿@using System.Text.Json
 @model DashboardViewModel
 
-<h1>📊 Stock Dashboard</h1>
+<h2>Trending Stocks Dashboard</h2>
+<button id="exportButton" class="btn btn-primary">Export Dashboard</button>
 
-<form method="get">
-    <label>Filter by Industry:</label>
-    <select name="industry" onchange="this.form.submit()">
-        <option value="">-- All --</option>
+<div class="form-group">
+    <label for="industry">Select Industry</label>
+    <select id="industry" class="form-control" onchange="filterDashboard()">
+        <option value="">All Industries</option>
         @foreach (var industry in Model.Industries)
         {
-            <option value="@industry" selected="@(industry == Model.SelectedIndustry ? "selected" : null)">
-                @industry
-            </option>
+            <option value="@industry" selected="@(industry == Model.SelectedIndustry ? "selected" : "")">@industry</option>
+
         }
     </select>
-</form>
+</div>
 
-<canvas id="stockChart" width="400" height="200"></canvas>
+<div class="form-group">
+    <label for="stockName">Search Stock Name</label>
+    <input type="text" id="stockName" class="form-control" value="@Model.SelectedStockName" onkeyup="filterDashboard()">
+</div>
 
+<div>
+    <h2>How do the current stock prices vary?</h2>
+    <canvas id="stockChart" width="400" height="400"></canvas>
+
+    <h2>How Volatile Are the Stocks Based on Their Price Changes?</h2>
+    <canvas id="volatilityPieChart" width="400" height="400"></canvas>
+
+    <h2>What Is the Correlation Between Stock Price and Volatility?</h2>
+    <canvas id="stockPriceVolatilityChart" width="400" height="400"></canvas>
+
+    <h2>What Is the Top Performing Stock in Each Industry?</h2>
+    <canvas id="radarChart" width="400" height="400"></canvas>
+</div>
+
+<h2>What is the Top Performing Stock?</h2>
 <table class="table">
     <thead>
         <tr>
@@ -36,7 +53,9 @@
     <tbody>
         @foreach (var stock in Model.Stocks)
         {
-            <tr>
+            var rowClass = stock.ChgPercentage > 5 ? "high-volatility" : (stock.ChgPercentage < -5 ? "low-volatility" : "");
+            
+            <tr class="@rowClass">
                 <td>@stock.Name</td>
                 <td>@stock.Last</td>
                 <td>@stock.High</td>
@@ -52,18 +71,21 @@
 </table>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const ctx = document.getElementById('stockChart').getContext('2d');
-
-        const chart = new Chart(ctx, {
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <script>
+     window.onload = function () {
+        // Bar chart for stock prices
+        const stockChartCtx = document.getElementById('stockChart').getContext('2d');
+        const stockChart = new Chart(stockChartCtx, {
             type: 'bar',
             data: {
                 labels: @Html.Raw(JsonSerializer.Serialize(Model.Stocks.Select(s => s.Name))),
                 datasets: [{
                     label: 'Stock Prices',
                     data: @Html.Raw(JsonSerializer.Serialize(Model.Stocks.Select(s => s.Last))),
-                    backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -75,55 +97,152 @@
                 }
             }
         });
-    </script>
-} 
 
+        // Pie chart for stock volatility
+        const stockNamesPie = @Html.Raw(JsonSerializer.Serialize(Model.Stocks.Select(s => s.Name)));
+        const chgPercentages = @Html.Raw(JsonSerializer.Serialize(Model.Stocks.Select(s => Math.Abs(s.ChgPercentage ?? 0))));
+        const mostVolatile = "@Model.StockWithHighestVolatility?.Name";
 
-@* @model DashboardViewModel
+        const backgroundColors = stockNamesPie.map(name =>
+            name === mostVolatile ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.5)'
+        );
 
-<h1>📊 Stock Dashboard</h1>
+        const borderColors = backgroundColors.map(c => c.replace('0.5', '1'));
 
-<form method="get">
-    <label>Filter by Industry:</label>
-    <select name="industry" onchange="this.form.submit()">
-        <option value="">-- All --</option>
-        @foreach (var industry in Model.Industries)
-        {
-            <option value="@industry" selected="@(industry == Model.SelectedIndustry ? "selected" : null)">
-                @industry
-            </option>
-        }
-    </select>
-</form>
+        const volatilityPieChartCtx = document.getElementById('volatilityPieChart').getContext('2d');
+        const volatilityPieChart = new Chart(volatilityPieChartCtx, {
+            type: 'pie',
+            data: {
+                labels: stockNamesPie,
+                datasets: [{
+                    label: 'Volatility by Change %',
+                    data: chgPercentages,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Volatility by Stock (Pie)',
+                        font: { size: 18 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const value = context.parsed;
+                                return `${context.label}: ${value.toFixed(2)}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Last</th>
-            <th>High</th>
-            <th>Low</th>
-            <th>Chg</th>
-            <th>Chg %</th>
-            <th>Volume</th>
-            <th>Time</th>
-            <th>Industry</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var stock in Model.Stocks)
-        {
-            <tr>
-                <td>@stock.Name</td>
-                <td>@stock.Last</td>
-                <td>@stock.High</td>
-                <td>@stock.Low</td>
-                <td>@stock.Chg</td>
-                <td>@stock.ChgPercentage</td>
-                <td>@stock.Volume</td>
-                <td>@stock.Time</td>
-                <td>@stock.Industry</td>
-            </tr>
-        }
-    </tbody>
-</table> *@
+        // Scatter plot for Stock Price vs Volatility
+        const stockNames = @Html.Raw(JsonSerializer.Serialize(Model.Stocks.Select(s => s.Name)));
+        const stockPrices = @Html.Raw(JsonSerializer.Serialize(Model.Stocks.Select(s => s.Last)));
+        const volatilityPercentages = @Html.Raw(JsonSerializer.Serialize(Model.Stocks.Select(s => Math.Abs(s.ChgPercentage ?? 0)))); // Absolute value for volatility
+
+        const dataPoints = stockPrices.map((price, index) => ({
+            x: price, // Stock Price (x-axis)
+            y: volatilityPercentages[index], // Volatility (y-axis)
+            label: stockNames[index] // Label for each point
+        }));
+
+        const stockPriceVolatilityChartCtx = document.getElementById('stockPriceVolatilityChart').getContext('2d');
+        const stockPriceVolatilityChart = new Chart(stockPriceVolatilityChartCtx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Stock Price vs Volatility',
+                    data: dataPoints,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'Stock Price ($)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Volatility (%)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const stockName = stockNames[context.dataIndex];
+                                return `${stockName}: Price = $${context.raw.x}, Volatility = ${context.raw.y.toFixed(2)}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Radar chart for Top Performing Stock in Each Industry
+        const industries = @Html.Raw(JsonSerializer.Serialize(Model.TopPerformingStocks.Select(i => i.Industry)));
+        const topStockNames = @Html.Raw(JsonSerializer.Serialize(Model.TopPerformingStocks.Select(i => i.TopPerformingStock.Name)));
+        const priceChanges = @Html.Raw(JsonSerializer.Serialize(Model.TopPerformingStocks.Select(i => i.TopPerformingStock.ChgPercentage)));
+
+        const radarChartCtx = document.getElementById('radarChart').getContext('2d');
+        const radarChart = new Chart(radarChartCtx, {
+            type: 'radar',
+            data: {
+                labels: industries, // Industry names
+                datasets: [{
+                    label: 'Top Performing Stocks by Industry',
+                    data: priceChanges, // Stock performance by percentage change
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scale: {
+                    ticks: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Top Performing Stock in Each Industry'
+                    }
+                }
+            }
+        });
+     }
+
+     // Filter function
+     function filterDashboard() {
+         const industry = document.getElementById('industry').value;
+         const stockName = document.getElementById('stockName').value;
+
+         const url = `@Url.Action("Index", "Home")?industry=${industry}&stockName=${stockName}`;
+         window.location.href = url;
+     }
+
+     document.getElementById('exportButton').onclick = function() {
+        window.location.href = '@Url.Action("ExportDashboard", "Dashboard")';
+    };
+   </script>
+}

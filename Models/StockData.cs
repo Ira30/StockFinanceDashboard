@@ -26,4 +26,6 @@ public class StockData
 
     public string? Time { get; set; }
     public string? Industry { get; set; }
+    public StockData? StockWithHighestVolatility { get; set; }
+
 }
